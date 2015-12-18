@@ -5,8 +5,6 @@ var xhrRequest = function (url, type, callback) {
         callback(this.responseText);
     };
     xhr.onerror = function(evt) {
-        console.log(JSON.stringify(evt));
-        console.log(evt.statusText);
         console.log("An error occurred while transferring the file.");
     };
 
@@ -17,9 +15,9 @@ var xhrRequest = function (url, type, callback) {
 function getDoorStatus() {
     console.log('Getting door status.');
     // Construct URL
-    var url = 'http://tone.hackeriet.no/door.json';
+    var url = 'https://hackeriet.no/door.json';
 
-    // Send request to OpenWeatherMap
+    // Send request to door.json
     xhrRequest(url, 'GET',
         function(responseText) {
             // responseText contains a JSON object with door info
@@ -29,6 +27,8 @@ function getDoorStatus() {
             var dictionary = {
                 'KEY_STATUS': json.status == "OPEN" ? 'y' : 'n'
             };
+
+            console.log("message: " + JSON.stringify(dictionary));
 
             // Send to Pebble
             Pebble.sendAppMessage(dictionary,

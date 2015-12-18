@@ -16,7 +16,9 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
 
     // If all data is available, use it
     if(status_tuple) {
-        snprintf(door_buffer, sizeof(door_buffer), "%dC", (int)status_tuple->value->int32);
+        snprintf(door_buffer, sizeof(door_buffer), "%c", (int)status_tuple->value->int32);
+        APP_LOG(APP_LOG_LEVEL_INFO, "door: ");
+        APP_LOG(APP_LOG_LEVEL_INFO, door_buffer);
 
         if(memchr(door_buffer, 'y', sizeof(door_buffer)) == 0) {
             text_layer_set_background_color(s_time_layer, GColorRed);
@@ -57,7 +59,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     update_time();
 
     // Get door update every 30 minutes
-    if(tick_time->tm_min % 1 == 0) {
+    if(tick_time->tm_min % 5 == 0) {
         // Begin dictionary
         DictionaryIterator *iter;
         app_message_outbox_begin(&iter);
