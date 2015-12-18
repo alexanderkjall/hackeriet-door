@@ -1,7 +1,44 @@
 #include <pebble.h>
 
+#define KEY_STATUS 0
+
 static Window* s_main_window;
 static TextLayer* s_time_layer;
+
+// Store incoming information
+static char door_buffer[32];
+
+static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
+    APP_LOG(APP_LOG_LEVEL_INFO, "Message received!");
+
+    // Read tuples for data
+    Tuple *status_tuple = dict_find(iterator, KEY_STATUS);
+
+    // If all data is available, use it
+    if(status_tuple) {
+        snprintf(door_buffer, sizeof(door_buffer), "%dC", (int)status_tuple->value->int32);
+
+        if(memchr(door_buffer, 'y', sizeof(door_buffer)) == 0) {
+            text_layer_set_background_color(s_time_layer, GColorRed);
+        } else {
+            text_layer_set_background_color(s_time_layer, GColorGreen);
+        }
+
+    }
+}
+
+static void inbox_dropped_callback(AppMessageResult reason, void *context) {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped!");
+}
+
+static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResult reason, void *context) {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed!");
+}
+
+static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
+    APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
+}
+
 
 static void update_time() {
     // Get a tm structure
@@ -10,10 +47,27 @@ static void update_time() {
 
     // Write the current hours and minutes into a buffer
     static char s_buffer[8];
-    strftime(s_buffer, sizeof(s_buffer), clock_is_24h_style() ? "%I:%M" : "%H:%M", tick_time);
+    strftime(s_buffer, sizeof(s_buffer), "%H:%M", tick_time);
 
     // Display this time on the TextLayer
     text_layer_set_text(s_time_layer, s_buffer);
+}
+
+static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
+    update_time();
+
+    // Get door update every 30 minutes
+    if(tick_time->tm_min % 1 == 0) {
+        // Begin dictionary
+        DictionaryIterator *iter;
+        app_message_outbox_begin(&iter);
+
+        // Add a key-value pair
+        dict_write_uint8(iter, 0, 0);
+
+        // Send the message!
+        app_message_outbox_send();
+    }
 }
 
 static void main_window_load(Window *window) {
@@ -39,10 +93,6 @@ static void main_window_unload(Window *window) {
     text_layer_destroy(s_time_layer);
 }
 
-static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
-    update_time();
-}
-
 static void init() {
     // Create main Window element and assign to pointer
     s_main_window = window_create();
@@ -61,6 +111,15 @@ static void init() {
 
     // Register with TickTimerService
     tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
+
+    // Register callbacks
+    app_message_register_inbox_received(inbox_received_callback);
+    app_message_register_inbox_dropped(inbox_dropped_callback);
+    app_message_register_outbox_failed(outbox_failed_callback);
+    app_message_register_outbox_sent(outbox_sent_callback);
+
+    // Open AppMessage
+    app_message_open(app_message_inbox_size_maximum(), app_message_outbox_size_maximum());
 }
 
 static void deinit() {

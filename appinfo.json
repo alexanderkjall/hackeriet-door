@@ -2,7 +2,7 @@
   "uuid": "de107e59-88cb-4327-9d8f-653ad7ea7fa6",
   "shortName": "hackeriet",
   "longName": "hackeriet",
-  "companyName": "MakeAwesomeHappen",
+  "companyName": "Capitol Industries",
   "versionLabel": "1.0",
   "sdkVersion": "3",
   "targetPlatforms": ["aplite", "basalt", "chalk"],
@@ -10,7 +10,7 @@
     "watchface": true
   },
   "appKeys": {
-    "dummy": 0
+    "KEY_STATUS": 0
   },
   "resources": {
     "media": []
