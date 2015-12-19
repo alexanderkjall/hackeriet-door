@@ -25,6 +25,10 @@
 static Window* s_main_window;
 static TextLayer* s_time_layer;
 
+static BitmapLayer *s_bitmap_layer;
+static GBitmap *s_open_bitmap;
+static GBitmap *s_closed_bitmap;
+
 // Store incoming information
 static char door_buffer[32];
 
@@ -41,11 +45,11 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
         APP_LOG(APP_LOG_LEVEL_INFO, door_buffer);
 
         if(memchr(door_buffer, 'y', sizeof(door_buffer)) == 0) {
-            text_layer_set_background_color(s_time_layer, GColorRed);
+            bitmap_layer_set_bitmap(s_bitmap_layer, s_closed_bitmap);
         } else {
-            text_layer_set_background_color(s_time_layer, GColorGreen);
+            bitmap_layer_set_bitmap(s_bitmap_layer, s_open_bitmap);
         }
-
+        layer_mark_dirty(bitmap_layer_get_layer(s_bitmap_layer));
     }
 }
 
@@ -78,7 +82,7 @@ static void update_time() {
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     update_time();
 
-    // Get door update every 30 minutes
+    // Get door update every 5 minutes
     if(tick_time->tm_min % 5 == 0) {
         // Begin dictionary
         DictionaryIterator *iter;
@@ -97,8 +101,12 @@ static void main_window_load(Window *window) {
     Layer *window_layer = window_get_root_layer(window);
     GRect bounds = layer_get_bounds(window_layer);
 
+    s_bitmap_layer = bitmap_layer_create(GRect(0, 0, 180, 180));
+    bitmap_layer_set_bitmap(s_bitmap_layer, s_open_bitmap);
+    layer_add_child(window_layer, bitmap_layer_get_layer(s_bitmap_layer));
+
     // Create the TextLayer with specific bounds
-    s_time_layer = text_layer_create(GRect(0, PBL_IF_ROUND_ELSE(58, 52), bounds.size.w, 50));
+    s_time_layer = text_layer_create(GRect(0, PBL_IF_ROUND_ELSE(118, 112), bounds.size.w, 50));
 
     // Improve the layout to be more like a watchface
     text_layer_set_background_color(s_time_layer, GColorClear);
@@ -111,6 +119,8 @@ static void main_window_load(Window *window) {
 }
 
 static void main_window_unload(Window *window) {
+    bitmap_layer_destroy(s_bitmap_layer);
+
     // Destroy TextLayer
     text_layer_destroy(s_time_layer);
 }
@@ -118,6 +128,9 @@ static void main_window_unload(Window *window) {
 static void init() {
     // Create main Window element and assign to pointer
     s_main_window = window_create();
+
+    s_open_bitmap = gbitmap_create_with_resource(RESOURCE_ID_OPEN_IMAGE);
+    s_closed_bitmap = gbitmap_create_with_resource(RESOURCE_ID_CLOSED_IMAGE);
 
     // Set handlers to manage the elements inside the Window
     window_set_window_handlers(s_main_window, (WindowHandlers) {
@@ -145,6 +158,13 @@ static void init() {
 }
 
 static void deinit() {
+    if (s_open_bitmap) {
+        gbitmap_destroy(s_open_bitmap);
+    }
+    if (s_closed_bitmap) {
+        gbitmap_destroy(s_closed_bitmap);
+    }
+
     window_destroy(s_main_window);
 }
 
